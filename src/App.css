@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Orbitron", sans-serif;
+  --font-sans: "Rajdhani", sans-serif;
+  --color-gears-red: #8b0000;
+  --color-gears-red-light: #b30000;
+  --color-gears-red-bright: #ff1a1a;
+  --color-gears-bg: #0d0d0d;
+}
+
+/* Base resets & layout */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--color-gears-bg);
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbar for modes container */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Hide scrollbars completely while keeping scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Vignette overlay */
+.vignette-overlay {
+  background: radial-gradient(circle, rgba(0,0,0,0.1) 20%, rgba(0,0,0,0.9) 100%);
+  pointer-events: none;
+}
+
+/* Scanning line overlay to simulate a gaming monitor HUD */
+.hud-scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.15) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+/* Animation for settings cog spin */
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 15s linear infinite;
+}
+
+/* Progress bar pulse glow */
+@keyframes red-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 2px rgba(255, 26, 26, 0.5));
+  }
+  50% { 
+    filter: drop-shadow(0 0 8px rgba(255, 26, 26, 0.8));
+  }
+}
+
+.animate-red-glow {
+  animation: red-glow 2s infinite;
+}
+
+/* Modal animation */
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-modal-in {
+  animation: modal-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
