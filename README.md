@@ -46,5 +46,4 @@ pnpm tauri build
 ![Setup](./screenshots/setup.png)
 ![Packs Selection](./screenshots/packs.png)
 ![Installing](./screenshots/installing.png)
-![Update Check](./screenshots/update-check.png)
 ![Already Installed](./screenshots/installed.png)
