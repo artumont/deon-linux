@@ -46,6 +46,21 @@ html, body, #root {
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Terms of Use scrollable container — thin red scrollbar */
+.terms-scroll-container::-webkit-scrollbar {
+  width: 3px;
+}
+.terms-scroll-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+.terms-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(139, 0, 0, 0.5);
+  border-radius: 2px;
+}
+.terms-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 0, 0, 0.8);
+}
+
 /* Vignette overlay */
 .vignette-overlay {
   background: radial-gradient(circle, rgba(0,0,0,0.1) 20%, rgba(0,0,0,0.9) 100%);
@@ -60,6 +75,22 @@ html, body, #root {
   );
   background-size: 100% 4px;
   pointer-events: none;
+}
+
+/* Step content wrapper — fade in each step */
+.step-content {
+  animation: step-fade-in 0.3s ease-out;
+}
+
+@keyframes step-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Animation for settings cog spin */
@@ -100,4 +131,13 @@ html, body, #root {
 
 .animate-modal-in {
   animation: modal-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom dropdown styles for Linux/GTK Webkit rendering */
+select {
+  color-scheme: dark;
+}
+select option {
+  background-color: #0a0a0a !important;
+  color: #e5e5e5 !important;
 }
