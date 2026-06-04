@@ -19,12 +19,19 @@ pub async fn download_pack(
 
     // 2. Build direct WebDAV download link with Basic Auth
     // Use the token as the username and empty password
-    let direct_dl_url = format!(
-        "https://nx87798.your-storageshare.de/public.php/dav/files/{}/{}{}",
-        file_info.token,
-        file_info.subpath.replace(' ', "%20"),
-        file_info.filename.replace(' ', "%20")
-    );
+    let direct_dl_url = if file_info.is_file_share {
+        format!(
+            "https://nx87798.your-storageshare.de/public.php/dav/files/{}",
+            file_info.token
+        )
+    } else {
+        format!(
+            "https://nx87798.your-storageshare.de/public.php/dav/files/{}/{}{}",
+            file_info.token,
+            file_info.subpath.replace(' ', "%20"),
+            file_info.filename.replace(' ', "%20")
+        )
+    };
 
     let client = Client::builder()
         .danger_accept_invalid_certs(true)

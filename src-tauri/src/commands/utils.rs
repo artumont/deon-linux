@@ -8,6 +8,7 @@ pub struct WebDavFileInfo {
     pub filename: String,
     pub content_length: u64,
     pub last_modified: String,
+    pub is_file_share: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -166,6 +167,66 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, S
 
     println!("[WEBDAV DEBUG] Resolving share token: {}", token);
     let root_body = query_propfind(&dav_client, &dav_url, &token).await?;
+
+    // Check if the root share is a directory or a file
+    let is_dir_share = root_body.contains("<d:collection/>") || root_body.contains("<collection/>");
+    if !is_dir_share {
+        let file_dav_url = format!("https://nx87798.your-storageshare.de/public.php/dav/files/{}", token);
+        let head_resp = dav_client.head(&file_dav_url)
+            .basic_auth(&token, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("HEAD request for file share failed: {}", e))?;
+
+        let mut filename = format!("{}.deon", token); // fallback
+        if let Some(cd_header) = head_resp.headers().get("content-disposition") {
+            if let Ok(cd_str) = cd_header.to_str() {
+                if let Some(idx) = cd_str.find("filename=\"") {
+                    let sub = &cd_str[idx + "filename=\"".len()..];
+                    if let Some(end_idx) = sub.find('"') {
+                        filename = sub[..end_idx].to_string();
+                    }
+                } else if let Some(idx) = cd_str.find("filename*=") {
+                    let sub = &cd_str[idx + "filename*=".len()..];
+                    if let Some(utf_idx) = sub.find("UTF-8''") {
+                        filename = percent_decode(sub[utf_idx + "UTF-8''".len()..].split(';').next().unwrap_or("").trim());
+                    } else {
+                        filename = percent_decode(sub.split(';').next().unwrap_or("").trim());
+                    }
+                }
+            }
+        }
+
+        let mut content_length = 0;
+        if let Some(s_start) = root_body.find("<d:getcontentlength>") {
+            if let Some(s_end) = root_body[s_start..].find("</d:getcontentlength>") {
+                let size_str = &root_body[s_start + "<d:getcontentlength>".len() .. s_start + s_end];
+                content_length = size_str.trim().parse::<u64>().unwrap_or(0);
+            }
+        }
+
+        let mut last_modified = String::new();
+        if let Some(m_start) = root_body.find("<d:getlastmodified>") {
+            if let Some(m_end) = root_body[m_start..].find("</d:getlastmodified>") {
+                last_modified = root_body[m_start + "<d:getlastmodified>".len() .. m_start + m_end].trim().to_string();
+            }
+        }
+
+        println!(
+            "[WEBDAV DEBUG] Resolved file share: filename={}, size={}",
+            filename, content_length
+        );
+
+        return Ok(WebDavFileInfo {
+            token: token.clone(),
+            subpath: "".to_string(),
+            filename,
+            content_length,
+            last_modified,
+            is_file_share: true,
+        });
+    }
+
     let items = parse_propfind_xml(&root_body, &path_prefix);
 
     // Try to find .deon file in the root directory first
@@ -178,6 +239,7 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, S
                 filename: item.filename.clone(),
                 content_length: item.content_length,
                 last_modified: item.last_modified.clone(),
+                is_file_share: false,
             });
         }
     }
@@ -228,6 +290,7 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, S
                         filename: item.filename.clone(),
                         content_length: item.content_length,
                         last_modified: item.last_modified.clone(),
+                        is_file_share: false,
                     });
                 }
             }
