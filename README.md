@@ -2,6 +2,9 @@
 
 A desktop installer designed to download, authenticate, and extract Delta Online (DEON) content packs (including map packs, DLCs, and campaigns) on Linux systems.
 
+
+> #### Made with the help of Antigravity. Contributions are welcome.
+
 ## System Requirements
 
 The application requires `7z` (provided by `p7zip`) to extract the downloaded `.deon` zip archives. Ensure it is installed on your system:
@@ -22,10 +25,8 @@ The application requires `7z` (provided by `p7zip`) to extract the downloaded `.
 
 ## How It Works
 
-1. **Terms of Use**: Reviews affiliation and usage terms.
-2. **Settings Setup**: Configures your Delta Online installation folder and imports Steam credentials (used to retrieve passwords for encrypted map packs).
-3. **Pack Selection**: Dynamically scans server mirrors, displays available content packs, and allows selecting custom items.
-4. **Automated Installation**: Downloads packages from public mirror shares, requests passwords securely from the auth backend, and unpacks files into the configured directory.
+1. **Pack Selection**: Dynamically scans server mirrors, displays available content packs, and allows selecting custom items.
+2. **Automated Installation**: Downloads packages from public mirror shares, requests passwords securely from the auth backend, and unpacks files into the configured directory.
 
 
 ## Architecture Details
@@ -64,6 +65,3 @@ pnpm tauri dev
 ```bash
 pnpm tauri build
 ```
----
-
-> *~ Made with the help of Antigravity. Contributions are welcome. ~*
