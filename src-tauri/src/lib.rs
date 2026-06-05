@@ -15,6 +15,7 @@ pub fn run() {
             commands::download::download_pack,
             commands::extract::extract_pack,
             commands::update::check_pack_update,
+            commands::utils::resolve_webdav_metadata,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

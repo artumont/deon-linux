@@ -1,7 +1,8 @@
 use reqwest::Client;
 use std::time::Duration;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WebDavFileInfo {
     pub token: String,
     pub subpath: String, // e.g., "16-05-26/" or empty
@@ -306,4 +307,9 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<Vec<WebDavFileInf
     }
 
     Err("No .deon file found in the mirror share directory (including subfolders).".to_string())
+}
+
+#[tauri::command]
+pub async fn resolve_webdav_metadata(download_url: String) -> Result<Vec<WebDavFileInfo>, String> {
+    resolve_webdav_file(&download_url).await
 }

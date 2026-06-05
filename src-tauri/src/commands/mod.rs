@@ -11,3 +11,4 @@ pub use auth::authenticate_pack;
 pub use download::download_pack;
 pub use extract::extract_pack;
 pub use update::check_pack_update;
+pub use utils::resolve_webdav_metadata;
