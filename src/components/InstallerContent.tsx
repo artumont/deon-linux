@@ -6,9 +6,17 @@ interface InstallerContentProps {
   packStatuses: PackStatus[];
   isUpdateMode: boolean;
   onBackToSelection: () => void;
+  onApplyUpdates?: () => void;
+  isInstalling?: boolean;
 }
 
-function InstallerContent({ packStatuses, isUpdateMode, onBackToSelection }: InstallerContentProps) {
+function InstallerContent({
+  packStatuses,
+  isUpdateMode,
+  onBackToSelection,
+  onApplyUpdates,
+  isInstalling = false,
+}: InstallerContentProps) {
   const [activeFix, setActiveFix] = useState<string | null>(null);
 
   const allComplete = packStatuses.length > 0 && packStatuses.every(
@@ -173,6 +181,23 @@ function InstallerContent({ packStatuses, isUpdateMode, onBackToSelection }: Ins
                 <button
                   onClick={onBackToSelection}
                   className="w-full px-5 py-2.5 bg-neutral-950 border border-neutral-850 text-neutral-400 hover:text-white hover:bg-neutral-900 hover:border-red-900/50 transition-all duration-200 font-display font-bold tracking-widest text-[10px] rounded uppercase shadow-md"
+                >
+                  Modify Pack Selection
+                </button>
+              </div>
+            )}
+
+            {packStatuses.some((s) => s.state === "outdated") && !isInstalling && onApplyUpdates && (
+              <div className="mt-4 space-y-2 animate-fade-in">
+                <button
+                  onClick={onApplyUpdates}
+                  className="w-full px-5 py-2.5 bg-red-900 border border-red-800 text-white hover:bg-red-700 hover:border-red-600 transition-all duration-200 font-display font-bold tracking-widest text-[10px] rounded uppercase shadow-md"
+                >
+                  Apply Updates
+                </button>
+                <button
+                  onClick={onBackToSelection}
+                  className="w-full px-5 py-2.5 bg-neutral-950 border border-neutral-850 text-neutral-400 hover:text-white hover:bg-neutral-900 hover:border-red-900/50 transition-all duration-200 font-display font-bold tracking-widest text-[10px] rounded uppercase"
                 >
                   Modify Pack Selection
                 </button>

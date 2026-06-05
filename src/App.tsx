@@ -437,8 +437,10 @@ function App() {
         // Also add the installed packs to selectedPacks so they appear selected if modifying
         setSelectedPacks(manifest.installedPacks.map((ep) => ep.packId));
 
+        setIsUpdateMode(true);
         // Transition to Step 3 (which renders InstallerContent showing success & Hub)
         setStep(3);
+        checkUpdates(manifest, manifest.mirrorId || 1);
         return true;
       } else {
         // No manifest found, but valid directory. Just populate path and proceed to settings setup
@@ -451,6 +453,70 @@ function App() {
       console.error("Failed to import existing installation:", err);
       alert("Failed to import installation: " + String(err));
       return false;
+    }
+  };
+
+  const handleMarkAsInstalled = async (packId: string): Promise<void> => {
+    try {
+      let contentLength = 0;
+      let lastModified = "";
+
+      const downloadUrl = getPackDownloadUrl(packId, mirrorId);
+      try {
+        const files = await invoke<any[]>("resolve_webdav_metadata", { downloadUrl });
+        if (files && files.length > 0) {
+          contentLength = files.reduce((sum, f) => sum + (f.contentLength || 0), 0);
+          lastModified = files.map((f) => f.lastModified || "").join(";");
+        }
+      } catch (err) {
+        console.warn(`Failed to resolve WebDAV metadata for ${packId}, using empty metadata:`, err);
+      }
+
+      const currentManifest = (await invoke<InstallManifest | null>("read_manifest", {
+        installPath: installPath,
+      })) || {
+        installPath: installPath,
+        steamId: steamId,
+        mirrorId: mirrorId,
+        installedPacks: [],
+      };
+
+      currentManifest.installedPacks = currentManifest.installedPacks.filter(
+        (p) => p.packId !== packId
+      );
+      currentManifest.installedPacks.push({
+        packId,
+        contentHash: "",
+        contentLength,
+        lastModified,
+        installedAt: new Date().toISOString(),
+      });
+
+      await invoke<void>("write_manifest", { manifest: currentManifest });
+
+      if (!selectedPacks.includes(packId)) {
+        setSelectedPacks((prev) => [...prev, packId]);
+      }
+
+      setPackStatuses((prev) => {
+        const statusIndex = prev.findIndex((s) => s.packId === packId);
+        const newStatus = {
+          packId,
+          state: "up-to-date" as const,
+          progress: 100,
+        };
+        if (statusIndex !== -1) {
+          const next = [...prev];
+          next[statusIndex] = newStatus;
+          return next;
+        } else {
+          return [...prev, newStatus];
+        }
+      });
+    } catch (err) {
+      console.error("Failed to mark pack as installed:", err);
+      alert("Failed to mark pack as installed: " + String(err));
+      throw err;
     }
   };
 
@@ -484,6 +550,8 @@ function App() {
             onDownloadSettingsChange={setDownloadSettings}
             onBeginInstall={beginInstallation}
             onBack={() => setStep(1)}
+            packStatuses={packStatuses}
+            onMarkAsInstalled={handleMarkAsInstalled}
           />
         )}
 
@@ -496,6 +564,8 @@ function App() {
                 setIsUpdateMode(false);
                 setStep(2);
               }}
+              onApplyUpdates={beginInstallation}
+              isInstalling={isInstalling}
             />
             <ProgressBar
               progress={overallProgress}

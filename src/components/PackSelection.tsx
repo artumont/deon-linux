@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CONTENT_PACKS } from "../packs";
-import type { ContentPack, DownloadSettings } from "../types";
+import type { ContentPack, DownloadSettings, PackStatus } from "../types";
 
 interface PackSelectionProps {
   selectedPacks: string[];
@@ -11,6 +11,8 @@ interface PackSelectionProps {
   onDownloadSettingsChange: (settings: DownloadSettings) => void;
   onBeginInstall: () => void;
   onBack: () => void;
+  packStatuses: PackStatus[];
+  onMarkAsInstalled: (packId: string) => Promise<void>;
 }
 
 function PackSelection({
@@ -22,8 +24,11 @@ function PackSelection({
   onDownloadSettingsChange,
   onBeginInstall,
   onBack,
+  packStatuses,
+  onMarkAsInstalled,
 }: PackSelectionProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [markingPackId, setMarkingPackId] = useState<string | null>(null);
 
   const togglePack = (packId: string, required: boolean) => {
     if (required) return; // Can't deselect required packs
@@ -81,20 +86,26 @@ function PackSelection({
         {/* Pack List */}
         <div className="overflow-y-auto max-h-[240px] space-y-1.5 pr-1 no-scrollbar">
           {CONTENT_PACKS.map((pack: ContentPack) => {
-            const isSelected = selectedPacks.includes(pack.id);
-            return (
-              <button
+             const isSelected = selectedPacks.includes(pack.id);
+             const status = packStatuses.find((s) => s.packId === pack.id);
+             const isInstalled = status?.state === "complete" || status?.state === "up-to-date";
+             const isMarking = markingPackId === pack.id;
+
+             return (
+              <div
                 key={pack.id}
-                onClick={() => togglePack(pack.id, pack.required)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded border transition-all duration-200 text-left group
+                className={`w-full flex items-center justify-between px-4 py-2.5 rounded border transition-all duration-200 text-left
                   ${isSelected
                     ? "bg-neutral-900/80 border-red-900/50 hover:border-red-800/70"
                     : "bg-neutral-950/50 border-neutral-800/40 hover:border-neutral-700/60 opacity-60 hover:opacity-80"
                   }
-                  ${pack.required ? "cursor-default" : "cursor-pointer"}
                 `}
               >
-                <div className="flex items-center space-x-3 min-w-0">
+                {/* Clickable toggle area */}
+                <div
+                  onClick={() => togglePack(pack.id, pack.required)}
+                  className={`flex items-center space-x-3 min-w-0 flex-1 ${pack.required ? "cursor-default" : "cursor-pointer"}`}
+                >
                   {/* Toggle indicator */}
                   <div
                     className={`w-3.5 h-3.5 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors duration-200
@@ -127,7 +138,35 @@ function PackSelection({
                     </p>
                   </div>
                 </div>
-              </button>
+
+                {/* Right action area */}
+                <div className="flex items-center shrink-0 ml-3">
+                  {isInstalled ? (
+                    <span className="text-[9px] font-display font-bold tracking-wider text-emerald-600 uppercase bg-emerald-950/20 px-2 py-0.5 rounded border border-emerald-900/20">
+                      Installed
+                    </span>
+                  ) : isMarking ? (
+                    <span className="text-[9px] font-display font-bold tracking-wider text-red-500 uppercase animate-pulse">
+                      Marking...
+                    </span>
+                  ) : (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setMarkingPackId(pack.id);
+                        try {
+                          await onMarkAsInstalled(pack.id);
+                        } finally {
+                          setMarkingPackId(null);
+                        }
+                      }}
+                      className="px-2 py-1 text-[9px] font-display font-semibold tracking-wider text-neutral-400 hover:text-white border border-neutral-850 hover:border-red-900/40 rounded uppercase transition-all duration-200 hover:bg-neutral-900"
+                    >
+                      Mark Installed
+                    </button>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
