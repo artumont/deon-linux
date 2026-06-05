@@ -218,6 +218,13 @@ function App() {
           const tempDir = downloadSettings.tempLocation || installPath;
 
           const downloadResult = await invoke<{
+            files: Array<{
+              filePath: string;
+              filename: string;
+              contentHash: string;
+              contentLength: number;
+              lastModified: string;
+            }>;
             filePath: string;
             contentHash: string;
             contentLength: number;
@@ -234,31 +241,33 @@ function App() {
             return;
           }
 
-          // 2. Authenticate
-          updateStatus("authenticating", 100);
+          // 2. Authenticate & Extract each file in the pack
           const steamHex = steam64ToHex(steamId);
-          const dlFilename = downloadResult.filePath.split(/[/\\]/).pop() || "";
-          const cleanPackName = dlFilename.replace(/\.deon$/i, "");
-          const password = await invoke<string>("authenticate_pack", {
-            packName: cleanPackName,
-            steamHex,
-          });
+          let fileIndex = 0;
+          for (const file of downloadResult.files) {
+            fileIndex++;
+            updateStatus("authenticating", Math.round(((fileIndex - 0.5) / downloadResult.files.length) * 100));
+            const cleanPackName = file.filename.replace(/\.deon$/i, "");
+            const password = await invoke<string>("authenticate_pack", {
+              packName: cleanPackName,
+              steamHex,
+            });
 
-          if (!isInstallingRef.current) {
-            installQueueRef.current.unshift(packId);
-            updateStatus("queued", 0);
-            return;
+            if (!isInstallingRef.current) {
+              installQueueRef.current.unshift(packId);
+              updateStatus("queued", 0);
+              return;
+            }
+
+            updateStatus("extracting", Math.round((fileIndex / downloadResult.files.length) * 100));
+            await invoke<void>("extract_pack", {
+              packId,
+              filePath: file.filePath,
+              destDir: installPath,
+              password,
+              keepFile: downloadSettings.keepFiles,
+            });
           }
-
-          // 3. Extract
-          updateStatus("extracting", 0);
-          await invoke<void>("extract_pack", {
-            packId,
-            filePath: downloadResult.filePath,
-            destDir: installPath,
-            password,
-            keepFile: downloadSettings.keepFiles,
-          });
 
           // 4. Save to Manifest
           updateStatus("complete", 100);
@@ -378,6 +387,73 @@ function App() {
     packStatuses,
   ]);
 
+  const handleImportExisting = async (selectedPath: string): Promise<boolean> => {
+    try {
+      const isVerified = await invoke<boolean>("verify_installed", {
+        installPath: selectedPath,
+      });
+      if (!isVerified) {
+        alert("Delta Online executable ('deonupdater.exe') not found in this folder. Please select the correct folder.");
+        return false;
+      }
+
+      // Read manifest from selected path
+      const manifest = await invoke<InstallManifest | null>("read_manifest", {
+        installPath: selectedPath,
+      });
+
+      if (manifest) {
+        // Set state from manifest
+        setInstallPath(selectedPath);
+        if (manifest.steamId) {
+          setSteamId(manifest.steamId);
+          localStorage.setItem("deon_steam_id", manifest.steamId);
+        }
+        if (manifest.mirrorId) {
+          setMirrorId(manifest.mirrorId);
+          localStorage.setItem("deon_mirror_id", String(manifest.mirrorId));
+        }
+        localStorage.setItem("deon_install_path", selectedPath);
+
+        // Update packStatuses to match manifest
+        const updatedStatuses = CONTENT_PACKS.map((p) => {
+          const entry = manifest.installedPacks.find((ep) => ep.packId === p.id);
+          if (entry) {
+            return {
+              packId: p.id,
+              state: "complete" as const,
+              progress: 100,
+            };
+          }
+          return {
+            packId: p.id,
+            state: "queued" as const,
+            progress: 0,
+          };
+        }).filter((s) => manifest.installedPacks.some((ep) => ep.packId === s.packId));
+
+        setPackStatuses(updatedStatuses);
+
+        // Also add the installed packs to selectedPacks so they appear selected if modifying
+        setSelectedPacks(manifest.installedPacks.map((ep) => ep.packId));
+
+        // Transition to Step 3 (which renders InstallerContent showing success & Hub)
+        setStep(3);
+        return true;
+      } else {
+        // No manifest found, but valid directory. Just populate path and proceed to settings setup
+        setInstallPath(selectedPath);
+        localStorage.setItem("deon_install_path", selectedPath);
+        setStep(1); // Go to Settings step
+        return true;
+      }
+    } catch (err) {
+      console.error("Failed to import existing installation:", err);
+      alert("Failed to import installation: " + String(err));
+      return false;
+    }
+  };
+
   return (
     <div className="relative w-screen h-screen select-none overflow-hidden font-sans text-neutral-200 antialiased bg-[#030303]">
       <BackgroundLayer />
@@ -385,7 +461,7 @@ function App() {
 
       {/* Step content with transition */}
       <div className="step-content">
-        {step === 0 && <TermsOfUse onAccept={() => setStep(1)} />}
+        {step === 0 && <TermsOfUse onAccept={() => setStep(1)} onImport={handleImportExisting} />}
 
         {step === 1 && (
           <SetupSettings

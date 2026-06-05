@@ -2,11 +2,28 @@ import { useState, useRef, useEffect } from "react";
 
 interface TermsOfUseProps {
   onAccept: () => void;
+  onImport: (path: string) => void;
 }
 
-function TermsOfUse({ onAccept }: TermsOfUseProps) {
+function TermsOfUse({ onAccept, onImport }: TermsOfUseProps) {
   const [scrolledToEnd, setScrolledToEnd] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleImportClick = async () => {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "Select Existing Installation Folder",
+      });
+      if (selected) {
+        onImport(selected as string);
+      }
+    } catch (err) {
+      console.warn("Folder picker not available outside Tauri:", err);
+    }
+  };
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -24,9 +41,17 @@ function TermsOfUse({ onAccept }: TermsOfUseProps) {
   return (
     <main className="relative z-10 flex flex-col items-center justify-center h-[calc(100vh-60px)] px-6 md:px-16">
       <div className="w-full max-w-[620px] flex flex-col">
-        <h1 className="font-display text-xl md:text-2xl font-black tracking-wider text-white drop-shadow-md mb-1">
-          TERMS OF USE
-        </h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="font-display text-xl md:text-2xl font-black tracking-wider text-white drop-shadow-md">
+            TERMS OF USE
+          </h1>
+          <button
+            onClick={handleImportClick}
+            className="px-3 py-1.5 bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 hover:border-red-900/50 transition-all duration-200 font-display font-bold tracking-wider text-[10px] rounded uppercase shadow-sm"
+          >
+            Import Existing Install
+          </button>
+        </div>
         <p className="text-[10px] md:text-xs text-neutral-500 font-display tracking-widest uppercase mb-4">
           Please read carefully before proceeding
         </p>

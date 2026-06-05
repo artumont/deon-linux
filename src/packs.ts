@@ -51,6 +51,12 @@ export const CONTENT_PACKS: ContentPack[] = [
     required: false,
   },
   {
+    id: "pack-gears2vol3",
+    name: "Gears 2 Variety Pack Vol. 3",
+    description: "Additional maps and content from Gears of War 2 Volume 3.",
+    required: false,
+  },
+  {
     id: "pack-gears4",
     name: "Gears 4 Variety Pack",
     description: "Maps and content ported from Gears of War 4.",
