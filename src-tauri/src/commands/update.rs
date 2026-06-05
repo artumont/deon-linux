@@ -8,7 +8,7 @@ pub async fn check_pack_update(
     known_content_length: u64,
     known_last_modified: String,
 ) -> Result<UpdateCheckResult, String> {
-    let file_info = resolve_webdav_file(&download_url).await.map_err(|e| {
+    let files = resolve_webdav_file(&download_url).await.map_err(|e| {
         let err_res = UpdateCheckResult {
             pack_id: pack_id.clone(),
             status: "error".to_string(),
@@ -17,8 +17,11 @@ pub async fn check_pack_update(
         serde_json::to_string(&err_res).unwrap_or_default()
     })?;
 
-    let server_length = file_info.content_length;
-    let server_modified = file_info.last_modified;
+    let server_length: u64 = files.iter().map(|f| f.content_length).sum();
+    let server_modified = files.iter()
+        .map(|f| f.last_modified.as_str())
+        .collect::<Vec<&str>>()
+        .join(";");
 
     let length_changed = server_length > 0 && server_length != known_content_length;
     let modified_changed = !server_modified.is_empty()

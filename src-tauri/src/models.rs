@@ -46,7 +46,18 @@ pub struct UpdateCheckResult {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DownloadedFile {
+    pub file_path: String,
+    pub filename: String,
+    pub content_hash: String,
+    pub content_length: u64,
+    pub last_modified: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DownloadResult {
+    pub files: Vec<DownloadedFile>,
     pub file_path: String,
     pub content_hash: String,
     pub content_length: u64,

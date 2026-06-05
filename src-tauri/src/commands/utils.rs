@@ -121,7 +121,7 @@ fn parse_propfind_xml(body: &str, query_path: &str) -> Vec<ParsedPropItem> {
     items
 }
 
-pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, String> {
+pub async fn resolve_webdav_file(download_url: &str) -> Result<Vec<WebDavFileInfo>, String> {
     // 1. Get the redirect target of download_url without following redirects
     let client = Client::builder()
         .danger_accept_invalid_certs(true)
@@ -217,23 +217,24 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, S
             filename, content_length
         );
 
-        return Ok(WebDavFileInfo {
+        return Ok(vec![WebDavFileInfo {
             token: token.clone(),
             subpath: "".to_string(),
             filename,
             content_length,
             last_modified,
             is_file_share: true,
-        });
+        }]);
     }
 
     let items = parse_propfind_xml(&root_body, &path_prefix);
 
-    // Try to find .deon file in the root directory first
+    // Try to find .deon files in the root directory first
+    let mut root_files = Vec::new();
     for item in &items {
         if !item.is_directory && item.filename.to_lowercase().ends_with(".deon") {
             println!("[WEBDAV DEBUG] Found .deon in root folder: {}", item.filename);
-            return Ok(WebDavFileInfo {
+            root_files.push(WebDavFileInfo {
                 token: token.clone(),
                 subpath: "".to_string(),
                 filename: item.filename.clone(),
@@ -242,6 +243,9 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, S
                 is_file_share: false,
             });
         }
+    }
+    if !root_files.is_empty() {
+        return Ok(root_files);
     }
 
     // Otherwise, collect all subfolders
@@ -270,7 +274,7 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, S
 
     println!("[WEBDAV DEBUG] Sorted subfolders for scan: {:?}", subfolders);
 
-    // Scan each subfolder in order (newest first) to find a .deon file
+    // Scan each subfolder in order (newest first) to find .deon files
     for folder in subfolders {
         let sub_prefix = format!("/public.php/dav/files/{}/{}/", token, folder);
         let sub_url = format!("https://nx87798.your-storageshare.de{}", sub_prefix.replace(' ', "%20"));
@@ -278,13 +282,14 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, S
 
         if let Ok(sub_body) = query_propfind(&dav_client, &sub_url, &token).await {
             let sub_items = parse_propfind_xml(&sub_body, &sub_prefix);
+            let mut sub_files = Vec::new();
             for item in sub_items {
                 if !item.is_directory && item.filename.to_lowercase().ends_with(".deon") {
                     println!(
                         "[WEBDAV DEBUG] Found .deon in subfolder '{}': {}",
                         folder, item.filename
                     );
-                    return Ok(WebDavFileInfo {
+                    sub_files.push(WebDavFileInfo {
                         token: token.clone(),
                         subpath: format!("{}/", folder),
                         filename: item.filename.clone(),
@@ -293,6 +298,9 @@ pub async fn resolve_webdav_file(download_url: &str) -> Result<WebDavFileInfo, S
                         is_file_share: false,
                     });
                 }
+            }
+            if !sub_files.is_empty() {
+                return Ok(sub_files);
             }
         }
     }
